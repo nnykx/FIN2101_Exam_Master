@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RU Exam Simulator - FIN2101</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* RU Theme: Midnight Blue & Gold */
+            --bg-color: #0b132b;          
+            --card-bg: #1c2541;           
+            --card-border: #3a506b;
+            --text-main: #f0f4f8;
+            --text-muted: #9fb3c8;
+
+            --accent-primary: #f5b700;       /* Gold/Yellow for primary actions */
+            --accent-primary-hover: #ffcc33;
+            --accent-secondary: #5bc0be;     /* Teal for secondary highlights */
+            --accent-mint: #4caf50;          /* Correct */
+            --accent-peach: #ff9800;         /* Warnings */
+            --accent-pink: #f44336;          /* Wrong */
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
+        }
+
+        .screen { display: none; max-width: 800px; margin: auto; }
+        .screen.active { display: block; }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 25px;
+            background: linear-gradient(145deg, #1c2541, #0b132b);
+            border-radius: 16px;
+            border: 2px solid var(--accent-primary);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.45);
+        }
+        .header h1 { margin: 0 0 5px 0; color: var(--accent-primary); font-size: 1.8em; }
+        .header p { margin: 0; color: var(--text-muted); font-size: 0.95em; }
+
+        .dashboard {
+            background: rgba(91, 192, 190, 0.1);
+            border: 1px solid var(--accent-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        .dashboard h3 { margin-top: 0; color: var(--accent-secondary); }
+        .history-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px dashed var(--card-border); }
+        .history-item:last-child { border-bottom: none; }
+        .grade-badge { font-weight: bold; padding: 4px 10px; border-radius: 4px; background: rgba(245, 183, 0, 0.2); color: var(--accent-primary); font-size: 0.9em; }
+
+        .exam-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 30px; }
+        @media (min-width: 600px) { .exam-grid { grid-template-columns: 1fr 1fr; } }
+
+        .exam-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+        }
+        .exam-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(245, 183, 0, 0.2);
+        }
+        .exam-title { font-size: 1.2em; font-weight: bold; color: var(--accent-primary); margin-bottom: 5px; }
+        .exam-sub { font-size: 0.85em; color: var(--text-muted); }
+
+        .sticky-top {
+            position: sticky; top: 10px; z-index: 100;
+            background: rgba(28, 37, 65, 0.9); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 12px; border: 1px solid var(--card-border);
+            margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .back-nav { cursor: pointer; color: var(--accent-primary); font-weight: bold; text-decoration: none; }
+        .timer-display { font-size: 1.2em; font-weight: 600; color: var(--accent-secondary); }
+
+        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--card-border); }
+        .question-text { font-size: 1.15em; font-weight: 600; margin-bottom: 15px; line-height: 1.5; color: #fff; }
+
+        .option {
+            display: flex; align-items: center; padding: 14px 15px; margin: 8px 0;
+            background: rgba(255, 255, 255, 0.05); border: 2px solid transparent; border-radius: 10px;
+            cursor: pointer; transition: 0.2s; font-size: 1.05em;
+        }
+        .option:hover { background: rgba(245, 183, 0, 0.1); }
+        .option.selected { background: rgba(245, 183, 0, 0.2) !important; border-color: var(--accent-primary) !important; color: var(--accent-primary) !important; }
+        .option input { margin-right: 15px; transform: scale(1.3); accent-color: var(--accent-primary); }
+
+        .btn-main { background: var(--accent-primary); color: #0b132b; border: none; padding: 15px 20px; font-size: 1.1em; font-weight: bold; border-radius: 12px; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-main:hover { background: var(--accent-primary-hover); }
+
+        .result-box { text-align: center; padding: 30px 10px; }
+        .grade { font-size: 5em; font-weight: bold; margin: 10px 0; color: var(--accent-primary); }
+        
+        .detail-text { margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--accent-secondary); font-size: 0.95em; line-height: 1.6; color: #e0f8f1; display: none; }
+        .trick-box { background: rgba(245, 183, 0, 0.15); border-left: 4px solid var(--accent-primary); padding: 12px; margin-top: 12px; border-radius: 8px; color: var(--accent-primary); font-size: 0.95em; font-weight: 500; }
+        
+        .show-explanation .detail-text { display: block; }
+        .correct-ans { background: rgba(76, 175, 80, 0.2) !important; border-color: var(--accent-mint) !important; }
+        .wrong-ans { background: rgba(244, 67, 54, 0.2) !important; border-color: var(--accent-pink) !important; }
+    </style>
+</head>
+<body>
+
+<div id="home-screen" class="screen active">
+    <div class="header">
+        <h1>RU Exam Simulator</h1>
+        <p>ระบบจำลองการสอบ และประเมินเกรดมหาวิทยาลัยรามคำแหง</p>
+    </div>
+
+    <div class="dashboard">
+        <h3>ประวัติการสอบล่าสุด</h3>
+        <div id="history-container"><div style="color: var(--text-muted);">ยังไม่มีประวัติการสอบ</div></div>
+    </div>
+
+    <h3 style="color: var(--text-main); margin-bottom: 15px;">เลือกวิชาที่ต้องการทดสอบ</h3>
+    <div class="exam-grid">
+        <div class="exam-card" onclick="startExam('fin2101_2_68')">
+            <div class="exam-title">FIN2101 การเงินธุรกิจ</div>
+            <div class="exam-sub">ชุดเจาะเกราะ 2/68 (ข้อ 1-33)</div>
+        </div>
+    </div>
+</div>
+
+<div id="exam-screen" class="screen">
+    <div class="sticky-top">
+        <a class="back-nav" onclick="goHome()">◀ หน้าหลัก</a>
+        <div class="timer-display" id="countdown">02:30:00</div>
+    </div>
+    <div id="quiz-container"></div>
+    <button id="submit-btn" class="btn-main" onclick="calculateScore()">ส่งคำตอบและตรวจข้อสอบ</button>
+</div>
+
+<div id="result-screen" class="screen">
+    <div class="header">
+        <h1>สรุปผลการสอบ</h1>
+        <p id="result-exam-name">Exam Result</p>
+    </div>
+    <div class="card result-box">
+        <div style="font-size: 1.1em; color: var(--text-muted);">คะแนนของคุณ</div>
+        <div id="score-text" style="font-size: 2.2em; font-weight: bold; color: var(--accent-secondary);">0 / 0</div>
+        <div style="margin-top: 15px; font-size: 1.1em;">เกรดที่คาดว่าจะได้รับ (อิงเกณฑ์ ม.รามคำแหง)</div>
+        <div id="grade-display" class="grade">A</div>
+        <button class="btn-main" style="margin-top: 25px; margin-bottom: 15px;" onclick="reviewExam()">ดูเฉลยละเอียด</button>
+        <button class="btn-main" style="background: var(--card-border); color: var(--text-main);" onclick="goHome()">กลับสู่หน้าหลัก</button>
+    </div>
+</div>
+
+<script>
+    const examData = {
+        "fin2101_2_68": [
+            {
+                id: 1,
+                q: "1. จงคำนวณหาปริมาณขาย ณ จุดคุ้มทุน (Break even Point)",
+                opts: ["1,000 ไม้", "2,000 ไม้", "3,000 ไม้", "4,000 ไม้"],
+                ans: 2,
+                detail: "จุดคุ้มทุน (Break Even Point) คือจุดที่ธุรกิจไม่ได้กำไรแต่ก็ไม่ขาดทุน (รายได้ = ต้นทุนพอดี) สูตรคือ ต้นทุนคงที่รวม ÷ กำไรส่วนเกินต่อชิ้น ในโจทย์ ต้นทุนคงที่ = 20,000 (ค่าเช่า) + 10,000 (ค่าจ้าง) = 30,000 บาท ส่วนกำไรส่วนเกินคือ ราคาขาย(30) - ต้นทุนผันแปร(17+2+1=20) = 10 บาท/ชิ้น นำ 30,000 ÷ 10 จะได้ 3,000 ชิ้น",
+                trick: "จุดคุ้มทุน = ต้นทุนคงที่ ÷ (ราคาขาย - ต้นทุนผันแปร)",
+                cat: "การวิเคราะห์จุดคุ้มทุน"
+            },
+            {
+                id: 2,
+                q: "2. จงคำนวณหาปริมาณขาย ถ้าบริษัทฯ ต้องการกำไร 10,000 บาท",
+                opts: ["1,000 ไม้", "2,000 ไม้", "3,000 ไม้", "4,000 ไม้"],
+                ans: 3,
+                detail: "เมื่อธุรกิจมีเป้าหมาย 'กำไรที่ต้องการ' เราจะมองกำไรนั้นเป็นเหมือนต้นทุนคงที่อีกก้อนที่ต้องครอบคลุมให้ได้ สูตรคือ (ต้นทุนคงที่รวม + กำไรที่ต้องการ) ÷ กำไรส่วนเกินต่อชิ้น จะได้ (30,000 + 10,000) ÷ 10 = 4,000 ชิ้น หมายความว่าต้องขายให้ได้ 4,000 ชิ้นถึงจะได้กำไร 1 หมื่นตามเป้า",
+                trick: "เป้าหมายกำไร = (ฟิกซ์คอสต์ + กำไรเป้าหมาย) ÷ กำไรส่วนเกิน",
+                cat: "การวิเคราะห์จุดคุ้มทุน"
+            },
+            {
+                id: 3,
+                q: "3. หากบริษัทฯ ขายชีสเค้กได้ 2,000 ชิ้น จะมีผลประกอบการตามข้อใด",
+                opts: ["กำไร 20,000 บาท", "กำไร 10,000 บาท", "ขาดทุน 20,000 บาท", "ขาดทุน 10,000 บาท"],
+                ans: 3,
+                detail: "เรารู้จากข้อ 1 แล้วว่า 'จุดคุ้มทุน' คือ 3,000 ชิ้น ดังนั้นถ้าขายได้แค่ 2,000 ชิ้น แปลว่ายังขายไม่ถึงเป้า ต้องขาดทุนแน่นอน วิธีคิดง่ายๆ คือ เอา (ยอดขายจริง - ยอดคุ้มทุน) × กำไรส่วนเกินต่อชิ้น = (2,000 - 3,000) × 10 = -10,000 บาท (ติดลบคือขาดทุน)",
+                trick: "ยอดขาย < จุดคุ้มทุน = ขาดทุนล้านเปอร์เซ็นต์",
+                cat: "การวิเคราะห์จุดคุ้มทุน"
+            },
+            {
+                id: 4,
+                q: "4. หากสถานการณ์ที่บริษัทฯ กำลังเผชิญในกรณีที่ค่าเช่าเพิ่มขึ้นเป็น 25,000 บาท และมีกำไรส่วนเกินเท่ากับ 5 บาทต่อชิ้น จงคำนวณหาปริมาณขาย ณ จุดคุ้มทุน",
+                opts: ["3,000 ชิ้น", "5,000 ชิ้น", "7,000 ชิ้น", "3,500 ชิ้น"],
+                ans: 2,
+                detail: "สถานการณ์เปลี่ยน ตัวเลขเปลี่ยน! ต้นทุนคงที่ใหม่ = 25,000 (ค่าเช่าใหม่) + 10,000 (ค่าจ้างเดิม) = 35,000 บาท โจทย์ใจดีบอกกำไรส่วนเกินมาให้เลยคือ 5 บาท/ชิ้น เข้าสูตรเดิม: ต้นทุนคงที่รวม ÷ กำไรส่วนเกิน = 35,000 ÷ 5 = 7,000 ชิ้น",
+                trick: "จับตัวเลขใหม่เข้าสูตรเดิม: ฟิกซ์คอสต์ใหม่ ÷ กำไรส่วนเกินใหม่",
+                cat: "การวิเคราะห์จุดคุ้มทุน"
+            },
+            {
+                id: 5,
+                q: "5. สถานการณ์ใดที่ทำให้กำไรส่วนเกินเพิ่มขึ้น",
+                opts: ["ค่าจ้างพนักงานลดลง", "กล่องกระดาษลดลง", "ราคาขายลดลง", "ค่าเช่าลดลง"],
+                ans: 1,
+                detail: "กำไรส่วนเกิน (Contribution Margin) คิดจาก 'ราคาขาย - ต้นทุนผันแปร' เท่านั้น ไม่เกี่ยวกับต้นทุนคงที่! ดังนั้นถ้าอยากให้กำไรส่วนเกินพองขึ้น ต้องทำ 2 อย่างคือ 1) อัปราคาสินค้า หรือ 2) กดต้นทุนผันแปรให้ต่ำลง (กล่องกระดาษคือต้นทุนผันแปรต่อชิ้น) ส่วนค่าเช่ากับค่าจ้างเป็นต้นทุนคงที่ ไม่เกี่ยวกันเลย",
+                trick: "กำไรส่วนเกินแพ้ทางแค่ 'ราคาขาย' กับ 'ต้นทุนผันแปร'",
+                cat: "การวิเคราะห์จุดคุ้มทุน"
+            },
+            {
+                id: 6,
+                q: "6. จงคำนวณหาอัตราผลตอบแทนต่อผู้ถือหุ้นสามัญ (Rate of Return on Common Stock Equity : ROCE) ในปี 2568",
+                opts: ["55.50%", "40.50%", "37.50%", "25.75%"],
+                ans: 2,
+                detail: "ROCE เป็นตัวชี้วัดว่าเงินทุนที่ผู้ถือหุ้นลงไป สร้างกำไรกลับมาได้กี่เปอร์เซ็นต์ สูตรคือ (กำไรสุทธิ / ส่วนของผู้ถือหุ้นสามัญ) × 100 จากงบการเงิน: กำไรสุทธิ (EAT) = 120,000 และ ส่วนของผู้ถือหุ้นรวม = 320,000 บาท แทนค่า: (120,000 ÷ 320,000) × 100 = 37.50%",
+                trick: "ผลตอบแทนผู้ถือหุ้น = เอากำไรสุทธิ (บรรทัดล่างสุด) หารด้วย เงินของเจ้าของ",
+                cat: "การวิเคราะห์งบการเงิน"
+            },
+            {
+                id: 7,
+                q: "7. ข้อใดกล่าวถูกต้องเกี่ยวกับอัตราผลตอบแทนต่อผู้ถือหุ้นสามัญที่คำนวณได้ในข้อ 6.",
+                opts: ["ยิ่งต่ำยิ่งดี", "แสดงให้เห็นถึงประสิทธิภาพในการขายสินค้าของกิจการ", "ค่าที่คำนวณได้ในปี 2568 มีแนวโน้มดีขึ้น เมื่อเทียบกับปี 2567 เท่ากับ 25.75% แสดงให้เห็นว่ากิจการมีผลประกอบการดีขึ้น", "ค่าที่คำนวณได้ในปี 2568 มีแนวโน้มลดลง เมื่อเทียบกับอุตสาหกรรมเดียวกันที่มีค่าเท่ากับ 30.75%"],
+                ans: 2,
+                detail: "ผลตอบแทนต่อผู้ถือหุ้น (ROCE) เป็นตัวเลขมงคล ยิ่งสูงแปลว่าบริษัทเอาเงินผู้ถือหุ้นไปปั๊มกำไรได้เก่ง ในข้อนี้ปี 68 ได้ 37.50% ซึ่งสูงกว่าปี 67 (25.75%) จึงถือว่าเป็นสัญญาณที่ดีเยี่ยม กิจการทำผลงานได้เข้าเป้าและน่าลงทุน",
+                trick: "ผลตอบแทน (Return) อะไรก็ตาม ยิ่งสูงยิ่งรวย ยิ่งดี!",
+                cat: "การวิเคราะห์งบการเงิน"
+            },
+            {
+                id: 8,
+                q: "8. จงคำนวณหาระยะเวลาเก็บหนี้โดยเฉลี่ย (Average Days Sale Ratio) ในปี 2568",
+                opts: ["26.75 วัน", "25.75 วัน", "27.00 วัน", "27.75 วัน"],
+                ans: 2,
+                detail: "การหาระยะเวลาเก็บหนี้ (ลูกค้าค้างเงินกี่วันถึงจะจ่าย) ต้องหา 'อัตราหมุนเวียนลูกหนี้' ก่อน คือ ยอดขาย ÷ ลูกหนี้ = 500,000 ÷ 27,000 = 18.52 ครั้ง แล้วนำจำนวนวันใน 1 ปี (360) ÷ 18.52 = 19.44 วัน (หมายเหตุ: ช้อยส์ในต้นฉบับมีพิมพ์คลาดเคลื่อน แต่เฉลยยึดตามข้อ 3 แม้ตัวเลขจะไม่ตรงกับ 19.44)",
+                trick: "เก็บหนี้ = 360 ÷ (ยอดขาย/ลูกหนี้)",
+                cat: "การวิเคราะห์งบการเงิน"
+            },
+            {
+                id: 9,
+                q: "9. ข้อใดกล่าวถูกต้องเกี่ยวกับระยะเวลาเก็บหนี้โดยเฉลี่ยที่คำนวณได้ในข้อ 8.",
+                opts: ["ยิ่งสูงยิ่งดี เพราะทำให้ขายเชื่อได้มาก", "แสดงให้เห็นถึงประสิทธิภาพในการเรียกเก็บหนี้ของกิจการ", "ค่าที่คำนวณได้ในปี 2568 มีแนวโน้มดีขึ้น เมื่อเทียบกับปี 2567 เท่ากับ 30.75 วัน แสดงให้เห็นว่าขายเชื่อได้มากขึ้น และเก็บเงินได้เร็วขึ้น", "ค่าที่คำนวณได้ในปี 2568 มีแนวโน้มลดลง เมื่อเทียบกับอุตสาหกรรมเดียวกันที่มีค่าเท่ากับ 30.75 วัน"],
+                ans: 2,
+                detail: "ระยะเวลาเก็บหนี้เฉลี่ย (Average Collection Period) สะท้อนประสิทธิภาพการทวงหนี้ ยิ่งตัวเลข 'น้อยวัน' ยิ่งดี เพราะแปลว่าบริษัทได้เงินสดกลับมาหมุนเวียนเร็ว ปี 68 เก็บหนี้ได้ใน 19.44 วัน เร็วกว่าปี 67 (30.75 วัน) ถือว่าตามหนี้เก่งขึ้นมาก",
+                trick: "วันเก็บหนี้ = ยิ่งสั้นยิ่งดี ได้เงินไว ไม่เสี่ยงหนี้สูญ",
+                cat: "การวิเคราะห์งบการเงิน"
+            },
+            {
+                id: 10,
+                q: "10. จงคำนวณหาอัตราทุนหมุนเวียนอย่างเร็ว (Quick Ratio) ในปี 2568",
+                opts: ["1.4", "1.5", "1.6", "1.7"],
+                ans: 0,
+                detail: "Quick Ratio คือการวัดสภาพคล่องแบบ 'ด่วนจี๋' ว่าถ้าถูกทวงหนี้วันนี้ จะมีของเหลวไปจ่ายไหม โดยจะตัด 'สินค้าคงเหลือ' ออก เพราะขายเป็นเงินสดได้ยาก สูตรคือ (สินทรัพย์หมุนเวียน - สินค้าคงเหลือ) ÷ หนี้สินหมุนเวียน = (62,000 - 20,000) ÷ 30,000 = 1.4 เท่า",
+                trick: "Quick Ratio = สินทรัพย์สั้นตัดสต๊อกทิ้ง ÷ หนี้สั้น",
+                cat: "การวิเคราะห์งบการเงิน"
+            },
+            {
+                id: 11,
+                q: "11. ข้อใดกล่าวถูกต้องเกี่ยวกับอัตราทุนหมุนเวียนอย่างเร็ว (Quick Ratio) ที่คำนวณได้ในข้อ 10.",
+                opts: ["ยิ่งต่ำยิ่งดี เพราะทำให้มีสภาพคล่องสูง", "แสดงให้เห็นถึงประสิทธิภาพในการใช้สินทรัพย์", "ค่าที่คำนวณได้ในปี 2568 มีแนวโน้มดีขึ้น เมื่อเทียบกับปี 2567 เท่ากับ 1.20 เท่า แสดงให้เห็นว่ากิจการมีสภาพคล่องสูงกว่าปีที่แล้ว", "ค่าที่คำนวณได้ในปี 2568 มีแนวโน้มลดลง เมื่อเทียบกับอุตสาหกรรมเดียวกันที่มีค่าเท่ากับ 1.20 เท่า"],
+                ans: 2,
+                detail: "Quick Ratio เป็นตัววัดสภาพคล่อง ค่าที่คำนวณได้คือ 1.4 เท่า (มีเงินสดพร้อมจ่ายมากกว่าหนี้สั้น 1.4 เท่า) ซึ่งสูงกว่าปี 67 ที่มีแค่ 1.20 เท่า แปลว่าปีนี้บริษัทมีหลังพิงทางการเงินที่ปลอดภัยขึ้น มีความสามารถชำระหนี้ระยะสั้นได้ดีเยี่ยม",
+                trick: "อัตราทุนหมุนเวียน (สภาพคล่อง) ยิ่งสูง = ยิ่งปลอดภัยจากเจ้าหนี้",
+                cat: "การวิเคราะห์งบการเงิน"
+            },
+            {
+                id: 12,
+                q: "12. เดือนตุลาคม บริษัทฯ มีการจ่ายชำระค่าซื้อสินค้า เท่ากับเท่าใด",
+                opts: ["2,400 บาท", "3,600 บาท", "4,800 บาท", "8,000 บาท"],
+                ans: 2,
+                detail: "ตามนโยบาย: จ่ายค่าสินค้าใน 'เดือนถัดไป' จากที่ซื้อมา และต้นทุนซื้อคือ 60% ของยอดขายเดือนที่ขายล่วงหน้า แปลว่าของที่จะขายในเดือน พ.ย. (ยอดขาย 8,000) ต้องซื้อเตรียมไว้ในเดือน ต.ค. (ซื้อ = 8,000 × 60% = 4,800) และจ่ายเงินค่าของงวด ก.ย. ในเดือน ต.ค. = 8,000 × 60% = 4,800 บาท",
+                trick: "ดูเดือนที่ต้องจ่ายเงินให้ดีๆ นโยบายจ่ายช้า 1 เดือน = ต้องเอายอดซื้อของเดือนก่อนมาตอบ",
+                cat: "งบประมาณเงินสด"
+            },
+            {
+                id: 13,
+                q: "13. จงหาเงินสดรับทั้งสิ้นในเดือนพฤศจิกายน เท่ากับเท่าใด",
+                opts: ["2,400 บาท", "5,600 บาท", "5,800 บาท", "8,000 บาท"],
+                ans: 3,
+                detail: "เงินสดรับเดือน พ.ย. มาจาก 2 แหล่ง: 1) ยอดขายสดเดือน พ.ย. = 8,000 × 20% = 1,600 และ 2) ทวงหนี้ลูกหนี้จากเดือน ต.ค. (ขายเชื่อ 80%) = 8,000 × 80% = 6,400 รวมรับทั้งสิ้น = 1,600 + 6,400 = 8,000 บาท",
+                trick: "เงินเข้า = ยอดขายเงินสดเดือนนี้ + เก็บหนี้ที่ค้างจากเดือนก่อน",
+                cat: "งบประมาณเงินสด"
+            },
+            {
+                id: 14,
+                q: "14. จงหาเงินสดจ่ายทั้งสิ้นในเดือนกันยายน เท่ากับเท่าใด",
+                opts: ["4,800 บาท", "8,400 บาท", "6,000 บาท", "7,600 บาท"],
+                ans: 3,
+                detail: "เงินสดจ่ายเดือน ก.ย. มี 2 ก้อน: 1) จ่ายชำระเจ้าหนี้ (ยอดซื้อของเดือน ส.ค.) = ยอดขาย ก.ย.(6,000) × 60% = 3,600 บาท และ 2) จ่ายรายจ่ายอื่นๆ = 4,000 บาท รวมจ่าย = 3,600 + 4,000 = 7,600 บาท",
+                trick: "รวมบิลค่าใช้จ่ายทุกบรรทัดของเดือนนั้นๆ ให้ครบ",
+                cat: "งบประมาณเงินสด"
+            },
+            {
+                id: 15,
+                q: "15. มีการกู้เงินในเดือนใด",
+                opts: ["กันยายน 400 บาท", "ตุลาคม 1,000 บาท", "กันยายน 400 บาท และพฤศจิกายน 1,000 บาท", "พฤศจิกายน 3,200 บาท"],
+                ans: 1,
+                detail: "การกู้เงินจะเกิดเมื่อ 'เงินสดคงเหลือปลายงวด' ต่ำกว่าขั้นต่ำที่บริษัทตั้งไว้ (1,000 บาท) ในเดือน ต.ค. เงินรับ 6,400 - จ่าย 7,800 = เงินสดสุทธิ -1,400 รวมกับยอดยกมา 1,400 = เหลือ 0 บาท จึงต้องกู้เงิน 1,000 บาท เพื่อรักษายอดขั้นต่ำ",
+                trick: "ถ้าเงินเหลือในกระเป๋าน้อยกว่าเป้า = ต้องวิ่งไปกู้ธนาคารมาเติมให้เต็ม",
+                cat: "งบประมาณเงินสด"
+            },
+            {
+                id: 16,
+                q: "16. จงหาเงินสดหลังจากจัดการทางการเงิน ในเดือนพฤศจิกายน",
+                opts: ["2,200 บาท", "2,600 บาท", "3,400 บาท", "1,600 บาท"],
+                ans: 0,
+                detail: "เดือน พ.ย. เงินสดรับ 8,000 - จ่าย 5,800 = สุทธิ 2,200 บวกยอดยกมาจาก ต.ค. อีก 1,000 = มีเงิน 3,200 บาท บริษัทมีเงินเหลือเฟือ จึงเอาเงิน 1,000 บาทไปคืนหนี้ที่กู้มาตอนเดือน ต.ค. ทำให้เหลือเงินสดปลายงวด = 3,200 - 1,000 = 2,200 บาท",
+                trick: "เงินสดปลายงวด = (รับ - จ่าย) + เงินยกมา + กู้เพิ่ม - คืนหนี้",
+                cat: "งบประมาณเงินสด"
+            },
+            {
+                id: 17,
+                q: "17. จงหาเงินสดก่อนการจัดการทางการเงิน ในเดือนกันยายน",
+                opts: ["1,600 บาท", "1,000 บาท", "1,200 บาท", "800 บาท"],
+                ans: 3,
+                detail: "เงินสดก่อนการจัดหาเงิน คือเอาแค่ (เงินสดรับรวม - เงินสดจ่ายรวม) ของเดือนนั้น ในเดือน ก.ย. เงินสดรับคือ 8,400 บาท ลบด้วยเงินสดจ่ายคือ 7,600 บาท = 8,400 - 7,600 = 800 บาท",
+                trick: "ก่อนจัดหาเงิน = แค่เอารับลบจ่าย ยังไม่ต้องเอาเงินยอดยกมาบวก",
+                cat: "งบประมาณเงินสด"
+            },
+            {
+                id: 18,
+                q: "18. ในทางเลือกที่ 2 บริษัทฯ ต้องจ่ายดอกเบี้ยเท่ากับเท่าใด",
+                opts: ["120,000 บาท", "180,000 บาท", "300,000 บาท", "140,000 บาท"],
+                ans: 3,
+                detail: "ทางเลือกที่ 2 คือการระดมทุนโดยการ 'ออกหุ้นกู้' (ยืมเงินชาวบ้าน) 2,000,000 บาท ดอกเบี้ย 7% ดอกเบี้ยที่ต้องจ่ายต่อปี = 2,000,000 × 7% = 140,000 บาท ซึ่งการกู้หนี้สร้างภาระผูกพันทางการเงินชัดเจน",
+                trick: "ดอกเบี้ยจ่าย = เงินต้นของหนี้ก้อนใหม่ × อัตราดอกเบี้ย",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 19,
+                q: "19. ในทางเลือกที่ 1 จำนวนหุ้นสามัญทั้งหมด (เก่า+ใหม่) เท่ากับเท่าใด",
+                opts: ["250,000 หุ้น", "350,000 หุ้น", "500,000 หุ้น", "700,000 หุ้น"],
+                ans: 1,
+                detail: "ทางเลือกที่ 1 คือการหาเงินโดย 'ออกหุ้นสามัญใหม่' จำนวนเงินที่ต้องการคือ 2,000,000 บาท ราคาหุ้นละ 20 บาท = ต้องออกหุ้นใหม่ 100,000 หุ้น รวมกับหุ้นเก่าที่มีอยู่แล้ว 250,000 หุ้น = มีหุ้นรวมทั้งหมด 350,000 หุ้น (S1)",
+                trick: "หุ้นรวม = หุ้นเก่า + (เงินที่ต้องการเพิ่ม ÷ ราคาต่อหุ้น)",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 20,
+                q: "20. กำไรต่อหุ้น (Earning Per Share : EPS) ของทางเลือกที่ 1 และ 2 หา EBIT เพิ่มขึ้นเป็น 600,000 บาท",
+                opts: ["0.37 บาท และ 0.73 บาท", "1.37 บาท และ 1.73 บาท", "0.77 บาท และ 0.86 บาท", "0.95 บาท และ 1.02 บาท"],
+                ans: 1,
+                detail: "คิด EPS โดยเอากำไร EBIT (600k) หักดอกเบี้ย หักภาษี 20% จนเหลือกำไรสุทธิ แล้วหารด้วยจำนวนหุ้น ทางเลือก 1 (ไม่มีดอกเบี้ย หุ้น 350k) = 480k ÷ 350k = 1.37 บาท/หุ้น ทางเลือก 2 (หักดอกเบี้ย 140k หุ้น 250k) = 368k ÷ 250k = 1.73 บาท/หุ้น",
+                trick: "EPS = (EBIT - ดอกเบี้ย) × (1-ภาษี) ÷ จำนวนหุ้น",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 21,
+                q: "21. หากกำไรก่อนหักดอกเบี้ยและภาษี (EBIT) เพิ่มขึ้นเป็น 600,000 บาท ควรเลือกทางเลือกใด",
+                opts: ["ทางเลือกที่ 1", "ทางเลือกที่ 1 เพราะทำให้ EPS เท่ากัน", "ทางเลือกที่ 2", "ไม่ควรเลือกทั้ง 2 ทางเลือก เพราะทำให้ค่าของ EPS ลดลง"],
+                ans: 2,
+                detail: "ในโลกการเงิน ผู้ถือหุ้นรักเงิน! ดังนั้นเราต้องเลือกทางที่ให้ 'กำไรต่อหุ้น (EPS) สูงที่สุด' จากข้อ 20 ทางเลือกที่ 2 ให้ EPS ถึง 1.73 บาท (มากกว่าทางเลือก 1 ที่ได้ 1.37 บาท) การออกหุ้นกู้หรือทางเลือกที่ 2 จึงคุ้มค่ากว่าเมื่อ EBIT อยู่ในระดับสูง",
+                trick: "เลือกทางเลือกที่ให้ EPS (เงินตกถึงมือผู้ถือหุ้น) สูงที่สุดเสมอ!",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 22,
+                q: "22. จุด Indifference Point ของทางเลือกที่ 1 และ 2 เท่ากับเท่าใด",
+                opts: ["300,000 บาท", "420,000 บาท", "600,000 บาท", "490,000 บาท"],
+                ans: 3,
+                detail: "Indifference Point คือจุดที่ EBIT ทำให้ EPS ของทั้งสองทางเลือก 'เท่ากันพอดี' แก้สมการ (EBIT - 0)(1-0.2)/350,000 = (EBIT - 140,000)(1-0.2)/250,000 แก้สัดส่วนออกมาจะได้ EBIT ที่จุดนี้ = 490,000 บาท (จุดตัดสินใจ)",
+                trick: "จุด Indifference คือกำไรระดับกลางๆ ที่เลือกทางไหนก็ได้ผลตอบแทนเท่ากันเป๊ะ",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 23,
+                q: "23. ณ จุด Indifference Point จะทำให้ EPS ของทางเลือกที่ 1 และ 2 เท่ากับเท่าใด",
+                opts: ["1.54 บาท", "1.65 บาท", "1.12 บาท", "0.95 บาท"],
+                ans: 2,
+                detail: "เมื่อหา EBIT ณ จุด Indifference ได้ 490,000 บาท ให้นำไปแทนค่ากลับในสูตร EPS ของทางเลือกไหนก็ได้ เช่น ทางเลือก 1: [(490,000 - 0) × 0.8] ÷ 350,000 = 392,000 ÷ 350,000 = 1.12 บาทต่อหุ้น (คิดทางเลือก 2 ก็จะได้เท่ากัน)",
+                trick: "เอาค่า EBIT ที่เพิ่งหาได้ ไปคิดกำไรต่อหุ้นตามปกติ",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 24,
+                q: "24. ข้อ 24. ระบายคำตอบเหมือนข้อ 23. (ตอบ 3)",
+                opts: ["1.54 บาท", "1.65 บาท", "1.12 บาท", "0.95 บาท"],
+                ans: 2,
+                detail: "ข้อสอบให้ระบายคำตอบเหมือนข้อ 23 ซึ่งตอบข้อ 3 คือ 1.12 บาท",
+                trick: "ข้อแจกฟรีตามคำสั่ง",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 25,
+                q: "25. ข้อ 25. ระบายคำตอบเหมือนข้อ 23. (ตอบ 3)",
+                opts: ["1.54 บาท", "1.65 บาท", "1.12 บาท", "0.95 บาท"],
+                ans: 2,
+                detail: "ข้อสอบให้ระบายคำตอบเหมือนข้อ 23 ซึ่งตอบข้อ 3 คือ 1.12 บาท",
+                trick: "ข้อแจกฟรีตามคำสั่ง",
+                cat: "โครงสร้างเงินทุน"
+            },
+            {
+                id: 26,
+                q: "26. ราคาขายต่อหน่วยของสินค้า เท่ากับเท่าใด",
+                opts: ["50 บาท", "100 บาท", "150 บาท", "175.50 บาท"],
+                ans: 0,
+                detail: "หาราคาขาย (P) ได้จากการเอายอดขายรวมหารด้วยจำนวนหน่วยที่ขาย นโยบายเดิมยอดขาย 500,000 บาท และโจทย์บอกนโยบายใหม่ยอดขายลด 1,500 หน่วยเหลือ 8,500 หน่วย แปลว่าเดิมขายได้ 10,000 หน่วย ราคาต่อหน่วย = 500,000 ÷ 10,000 = 50 บาท/หน่วย",
+                trick: "ราคาต่อชิ้น = ยอดขายรวม ÷ จำนวนชิ้นที่ขาย",
+                cat: "นโยบายลูกหนี้การค้า"
+            },
+            {
+                id: 27,
+                q: "27. ถ้าเปลี่ยนแปลงนโยบายแล้ว กำไรของบริษัทจะเปลี่ยนแปลงอย่างไร",
+                opts: ["MB 45,000 บาท", "MC 45,000 บาท", "MB 35,000 บาท", "MC 35,000 บาท"],
+                ans: 1,
+                detail: "ยอดขายลดลง 1,500 หน่วย ทำให้กำไรส่วนเกินหายไป (MC = Marginal Cost/เสียผลประโยชน์) วิธีคิดคือ เอายอดขายที่หายไป × กำไรส่วนเกินต่อชิ้น (ราคา 50 - ต้นทุนผันแปร 20 = 30) จะได้ 1,500 × 30 = 45,000 บาทที่หายไป (MC)",
+                trick: "ยอดขายหล่น = กำไรหาย (MC เสียผลประโยชน์)",
+                cat: "นโยบายลูกหนี้การค้า"
+            },
+            {
+                id: 28,
+                q: "28. ถ้าเปลี่ยนแปลงนโยบายแล้ว ค่าของเงินลงทุนเฉลี่ยในลูกหนี้ ของบริษัทจะเปลี่ยนแปลงอย่างไร",
+                opts: ["MB 2,417 บาท", "MB 4,417 บาท", "MC 2,500 บาท", "MC 4,417 บาท"],
+                ans: 0,
+                detail: "นโยบายใหม่คนจ่ายเงินเร็วขึ้น (วันเก็บหนี้ลดจาก 2 เดือนเหลือ 1.5 เดือน) และขายได้น้อยลง ทำให้เงินจมในลูกหนี้น้อยลง คำนวณส่วนต่างของ 'ค่าเงินลงทุนในลูกหนี้' จะพบว่าบริษัทประหยัดเงินทุนไปได้ 2,417 บาท ถือเป็นผลประโยชน์ที่ได้เพิ่ม (MB = Marginal Benefit)",
+                trick: "เก็บหนี้ได้ไวขึ้น เงินจมน้อยลง = ได้ประโยชน์ (MB)",
+                cat: "นโยบายลูกหนี้การค้า"
+            },
+            {
+                id: 29,
+                q: "29. ผลตอบแทนกำไร เท่ากับเท่าใด",
+                opts: ["MC 3,500 บาท", "MB 3,624 บาท", "MB 3,500 บาท", "ไม่เปลี่ยนแปลง"],
+                ans: 1,
+                detail: "ผลตอบแทนจากการที่เงินลงทุนในลูกหนี้ลดลง (จากข้อ 28 ลูกหนี้เฉลี่ยลดลง 18,122 บาท) เอาไปคูณกับค่าเสียโอกาสของเงินทุน 20% จะได้ 18,122 × 20% = 3,624 บาท เป็นกำไร/ผลตอบแทนที่ตีกลับมาเป็นประโยชน์ต่อบริษัท (MB)",
+                trick: "เงินลงทุนที่ลดลง เอาไปคูณดอกเบี้ย (ค่าของเงิน) = ผลตอบแทน (MB)",
+                cat: "นโยบายลูกหนี้การค้า"
+            },
+            {
+                id: 30,
+                q: "30. ถ้าเปลี่ยนแปลงนโยบายแล้ว หนี้สูญของบริษัทจะเปลี่ยนแปลงอย่างไร",
+                opts: ["MC 25,000 บาท", "MB 16,500 บาท", "MC 16,500 บาท", "MB 25,000 บาท"],
+                ans: 1,
+                detail: "หนี้สูญคือคนที่เบี้ยวหนี้ นโยบายเดิมยอดขาย 500k เบี้ยว 5% = 25,000 นโยบายใหม่ยอดขาย 425k เบี้ยวลดลงเหลือ 2% = 8,500 บาท หนี้สูญลดลง = 25,000 - 8,500 = 16,500 บาท การที่หนี้สูญลดลงถือเป็นผลดีหรือผลประโยชน์ (MB)",
+                trick: "หนี้สูญลดลง = บริษัทเซฟเงินได้ = MB (Benefit)",
+                cat: "นโยบายลูกหนี้การค้า"
+            },
+            {
+                id: 31,
+                q: "31. ถ้าเปลี่ยนแปลงนโยบายแล้ว ส่วนลดเงินสดของบริษัทจะเปลี่ยนแปลงอย่างไร",
+                opts: ["MB 8,500 บาท", "MC 3,400 บาท", "MC 8,500 บาท", "MB 3,400 บาท"],
+                ans: 1,
+                detail: "บริษัทให้ส่วนลด 2% กับคนที่จ่ายเร็ว (มี 40% ของลูกค้าที่ใช้สิทธิ์) ยอดขาย 425,000 × 40% × 2% = 3,400 บาท การให้ส่วนลดคือการที่บริษัทต้องยอมเฉือนเนื้อตัวเองให้ลูกค้า ถือเป็นต้นทุนหรือการเสียประโยชน์เพิ่มขึ้น (MC)",
+                trick: "ลดราคาให้ลูกค้า = เงินบริษัทหาย = MC (Cost)",
+                cat: "นโยบายลูกหนี้การค้า"
+            },
+            {
+                id: 32,
+                q: "32. ข้อใดกล่าวถูกต้อง เกี่ยวกับบริษัทควรเปลี่ยนนโยบายใหม่หรือไม่ เพราะเหตุใด",
+                opts: ["ควรเปลี่ยนนโยบาย เพราะทำให้ NMB มีค่าเท่ากับ 25,859 บาท", "ควรเปลี่ยนนโยบาย เพราะทำให้ NMB มีค่าเท่ากับ 30,505.50 บาท", "ไม่ควรเปลี่ยนนโยบาย เพราะทำให้ NMB มีค่าเท่ากับ -25,859 บาท", "ไม่ควรเปลี่ยนนโยบาย เพราะทำให้ NMB มีค่าเท่ากับ -30,411.25 บาท"],
+                ans: 2,
+                detail: "ตัดสินใจโดยเอาผลประโยชน์รวม (Total MB) - ผลเสียรวม (Total MC) หากผลลัพธ์เป็นบวก (NMB) ควรทำ หากติดลบไม่ควรทำ ในข้อนี้ ผลเสียจากการที่ยอดขายลด (45,000) และให้ส่วนลด (3,400) มันหนักกว่าผลดีที่ได้หนี้สูญคืน ทำให้ผลประโยชน์สุทธิ (NMB) ติดลบ -25,859 บาท จึงไม่ควรเปลี่ยนนโยบาย",
+                trick: "ถ้ายอดรวม Benefit น้อยกว่า Cost = ติดลบ (อย่าหาทำ!)",
+                cat: "นโยบายลูกหนี้การค้า"
+            },
+            {
+                id: 33,
+                q: "33. ข้อมูลใด ที่พบน้อยที่สุดในงบฐานะการเงิน",
+                opts: ["ฐานะการเงิน", "ต้นทุน และค่าใช้จ่าย", "การจัดสรรเงินทุน", "ความเสี่ยงทางการเงิน"],
+                ans: 1,
+                detail: "งบฐานะการเงิน (Balance Sheet) เป็นภาพนิ่งที่โชว์ สินทรัพย์ หนี้สิน และทุน (บอกความมั่งคั่ง หนี้สิน และความเสี่ยง) แต่ 'ต้นทุนและค่าใช้จ่าย' เป็นการบันทึกกระแสการดำเนินงานตลอดปี ซึ่งจะไปโชว์อยู่ใน 'งบกำไรขาดทุน' (Income Statement) แทน",
+                trick: "ค่าใช้จ่าย ต้นทุน กำไร ไปอยู่ 'งบกำไรขาดทุน' ส่วนงบดุลโชว์แค่ของที่มีกับหนี้ที่ติด",
+                cat: "ความรู้พื้นฐานงบการเงิน"
+            }
+        ]
+    };
+
+    let currentQuestions = [];
+    let userAnswers = {};
+    let isReviewMode = false;
+
+    function startExam(subjKey) {
+        currentQuestions = examData[subjKey];
+        userAnswers = {};
+        isReviewMode = false;
+        let html = "";
+        currentQuestions.forEach((q, idx) => {
+            let detailHtml = q.detail ? `<div class="detail-text"><b>🔍 อธิบายละเอียด:</b><br>${q.detail}</div>` : '';
+            let trickHtml = q.trick ? `<div class="trick-box"><b>💡 ทริคการจำ:</b> ${q.trick}</div>` : '';
+            
+            html += `
+            <div class="card" id="card-${q.id}">
+                <div class="question-text">${q.q}</div>
+                ${q.opts.map((opt, optIdx) => `
+                    <label class="option" id="opt-${q.id}-${optIdx}" onclick="selectOption(${q.id},${optIdx})">
+                        <input type="radio" name="q_${q.id}" value="${optIdx}"> <span>${opt}</span>
+                    </label>
+                `).join('')}
+                <div id="explain-${q.id}" style="display:none;">
+                    ${detailHtml}
+                    ${trickHtml}
+                </div>
+            </div>`;
+        });
+        document.getElementById('quiz-container').innerHTML = html;
+        document.getElementById('submit-btn').style.display = 'block';
+        showScreen('exam-screen');
+    }
+
+    function selectOption(qId, optIdx) {
+        if(isReviewMode) return;
+        userAnswers[qId] = optIdx;
+        let card = document.getElementById(`card-${qId}`);
+        card.querySelectorAll('.option').forEach((el, i) => {
+            if(i === optIdx) el.classList.add('selected');
+            else el.classList.remove('selected');
+        });
+    }
+
+    function calculateScore() {
+        let score = 0;
+        currentQuestions.forEach(q => {
+            if (userAnswers[q.id] === q.ans) score++;
+        });
+
+        let percentage = Math.round((score / currentQuestions.length) * 100);
+        let grade = "F";
+        
+        // ตัดเกรดตามเกณฑ์มหาวิทยาลัยรามคำแหง
+        if (percentage >= 80) grade = "A";
+        else if (percentage >= 75) grade = "B+";
+        else if (percentage >= 70) grade = "B";
+        else if (percentage >= 65) grade = "C+";
+        else if (percentage >= 60) grade = "C";
+        else if (percentage >= 55) grade = "D+";
+        else if (percentage >= 50) grade = "D";
+
+        document.getElementById('score-text').innerText = `${score} / ${currentQuestions.length} (${percentage}%)`;
+        document.getElementById('grade-display').innerText = grade;
+        
+        let gradeColor = percentage >= 60 ? 'var(--accent-mint)' : (percentage >= 50 ? 'var(--accent-peach)' : 'var(--accent-pink)');
+        if (percentage >= 80) gradeColor = 'var(--accent-primary)';
+        document.getElementById('grade-display').style.color = gradeColor;
+
+        showScreen('result-screen');
+    }
+
+    function reviewExam() {
+        isReviewMode = true;
+        currentQuestions.forEach(q => {
+            let explainBox = document.getElementById(`explain-${q.id}`);
+            if (explainBox) {
+                explainBox.style.display = 'block';
+                explainBox.classList.add('show-explanation');
+            }
+            
+            let card = document.getElementById(`card-${q.id}`);
+            card.querySelectorAll('.option').forEach((el, i) => {
+                let radioBtn = el.querySelector('input');
+                radioBtn.disabled = true;
+                
+                if (i === q.ans) {
+                    el.classList.add('correct-ans');
+                } else if (i === userAnswers[q.id] && userAnswers[q.id] !== q.ans) {
+                    el.classList.add('wrong-ans');
+                }
+            });
+        });
+        document.getElementById('submit-btn').style.display = 'none';
+        showScreen('exam-screen');
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        window.scrollTo(0,0);
+    }
+
+    function goHome() { showScreen('home-screen'); }
+</script>
+</body>
+</html>
